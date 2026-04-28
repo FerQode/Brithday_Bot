@@ -1,3 +1,4 @@
+# .github/workflows/birthday-bot.yml
 name: 🎂 Birthday Bot — Envío Diario
 
 on:
@@ -12,6 +13,9 @@ jobs:
   send-birthdays:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # Evita el warning de deprecación de Node.js 20 y la migración forzada del 2 jun 2026
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       # 1. Descargar código del repo (incluye auth_info/auth.enc)
@@ -20,11 +24,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Configurar Node.js 20
-      - name: 🟢 Configurar Node.js 20
+      # 2. Configurar Node.js 22
+      - name: 🟢 Configurar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       # 3. Instalar dependencias (--legacy-peer-deps por conflicto de sharp)
@@ -61,6 +65,7 @@ jobs:
           git config user.email "bot@birthday.bot"
           git add auth_info/auth.enc
           git diff --staged --quiet || git commit -m "🔄 Auth renovado [skip ci]"
+          git pull --rebase origin main || true
           git push || echo "⚠️ Sin cambios que commitear"
 
       # 8. Notificación por email si el bot falla (requiere EMAIL_USER y EMAIL_APP_PASSWORD)
