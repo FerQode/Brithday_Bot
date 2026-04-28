@@ -1,0 +1,89 @@
+name: 🎂 Birthday Bot — Envío Diario
+
+on:
+  # Todos los días a las 9:00 AM Ecuador (UTC-5) = 14:00 UTC
+  schedule:
+    - cron: '0 14 * * *'
+
+  # Permite ejecución manual desde GitHub → Actions → Run workflow
+  workflow_dispatch:
+
+jobs:
+  send-birthdays:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. Descargar código del repo (incluye auth_info/auth.enc)
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Configurar Node.js 20
+      - name: 🟢 Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Instalar dependencias (--legacy-peer-deps por conflicto de sharp)
+      - name: 📦 Instalar dependencias
+        run: npm ci --legacy-peer-deps
+
+      # 4. Restaurar sesión de WhatsApp desde auth.enc
+      - name: 🔓 Desencriptar sesión de WhatsApp
+        run: node scripts/decrypt-auth.js
+        env:
+          AUTH_ENCRYPTION_KEY: ${{ secrets.AUTH_ENCRYPTION_KEY }}
+
+      # 5. Ejecutar el bot principal
+      - name: 🎂 Ejecutar Birthday Bot
+        run: node src/index.js
+        env:
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          AUTH_ENCRYPTION_KEY: ${{ secrets.AUTH_ENCRYPTION_KEY }}
+
+      # 6. Re-encriptar sesión actualizada (se ejecuta SIEMPRE, incluso si el bot falla)
+      - name: 🔒 Re-encriptar sesión de WhatsApp
+        if: always()
+        run: node scripts/encrypt-auth.js
+        env:
+          AUTH_ENCRYPTION_KEY: ${{ secrets.AUTH_ENCRYPTION_KEY }}
+
+      # 7. Commit y push de la sesión actualizada al repo
+      - name: 💾 Guardar sesión actualizada
+        if: always()
+        run: |
+          git config user.name "Birthday Bot"
+          git config user.email "bot@birthday.bot"
+          git add auth_info/auth.enc
+          git diff --staged --quiet || git commit -m "🔄 Auth renovado [skip ci]"
+          git push || echo "⚠️ Sin cambios que commitear"
+
+      # 8. Notificación por email si el bot falla (requiere EMAIL_USER y EMAIL_APP_PASSWORD)
+      - name: 🚨 Notificar fallo por email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_APP_PASSWORD }}
+          subject: '🚨 Birthday Bot FALLÓ — ${{ github.repository }}'
+          body: |
+            El bot de cumpleaños falló el día de hoy.
+
+            🔗 Ver log completo:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            📋 Posibles causas:
+            - Sesión de WhatsApp expirada (requiere npm run setup + push)
+            - Error de conexión a Google Sheets
+            - Número de teléfono inválido en los contactos
+
+            Responde a este email si necesitas soporte.
+          to: ${{ secrets.EMAIL_USER }}
+          from: Birthday Bot <${{ secrets.EMAIL_USER }}>

@@ -1,0 +1,7 @@
+node_modules/
+.env
+auth_info_baileys/
+output_test.jpg
+output_tests/
+*.log
+.DS_Store
