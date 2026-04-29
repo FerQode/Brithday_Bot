@@ -2,10 +2,10 @@
 name: 🎂 Birthday Bot — Envío Diario
 
 on:
-  # Todos los días a las 9:15 AM Ecuador (UTC-5) = 14:15 UTC
+  # Temporal: 11:05 AM Ecuador (UTC-5) = 16:05 UTC para test
   # (Evitamos el minuto 0 para que GitHub Actions no se retrase por tráfico)
   schedule:
-    - cron: '15 14 * * *'
+    - cron: '5 16 * * *'
 
   # Permite ejecución manual desde GitHub → Actions → Run workflow
   workflow_dispatch:
