@@ -16,7 +16,7 @@
   "dependencies": {
     "@whiskeysockets/baileys": "^6.17.16",
     "dotenv": "^17.4.2",
-    "google-auth-library": "^10.6.2",
+    "google-auth-library": "^10.9.0",
     "google-spreadsheet": "^5.2.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
